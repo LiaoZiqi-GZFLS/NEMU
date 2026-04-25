@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <cpu/cpu.h>
-#include "../local-include/csr.h"
 #include "../local-include/intr.h"
 
 unsigned long MEMORY_SIZE = CONFIG_MSIZE;
@@ -168,7 +167,7 @@ static inline void hardware_error_check(vaddr_t vaddr) {
 // MMIO access currently does not support hardware misalignment.
 void isa_mmio_misalign_data_addr_check(paddr_t paddr, vaddr_t vaddr, int len, int type, int is_cross_page) {
   if (unlikely((paddr & (len - 1)) != 0) || is_cross_page) {
-    Logm("addr misaligned happened: paddr:" FMT_PADDR " vaddr:" FMT_WORD " len:%d type:%d pc:%lx", paddr, vaddr, len, type, cpu.pc);
+    Logm("addr misaligned happened: paddr:" FMT_PADDR " vaddr:" FMT_WORD " len:%d type:%d pc:" FMT_WORD, paddr, vaddr, len, type, cpu.pc);
     if (ISDEF(CONFIG_MMIO_AC_SOFT)) {
       int ex = cpu.amo || type == MEM_TYPE_WRITE ? EX_SAM : EX_LAM;
       cpu.trapInfo.tval = vaddr;

@@ -42,6 +42,7 @@
 def_rtl_compute_reg_imm(add)
 def_rtl_compute_reg_imm(sub)
 def_rtl_compute_reg_imm(and)
+def_rtl_compute_reg_imm(andn)
 def_rtl_compute_reg_imm(or)
 def_rtl_compute_reg_imm(xor)
 def_rtl_compute_reg_imm(shl)
@@ -125,7 +126,7 @@ static inline def_rtl(div64s_r, rtlreg_t* dest,
 static inline def_rtl(lm, rtlreg_t *dest, const rtlreg_t* addr,
     word_t offset, int len, int mmu_mode) {
   *dest = vaddr_read(s, *addr + offset, len, mmu_mode);
-#ifdef CONFIG_QUERY_REF
+#if defined(CONFIG_QUERY_REF) && defined(CONFIG_ISA64)
   cpu.query_mem_event.pc = cpu.debug.current_pc;
   cpu.query_mem_event.mem_access = true;
   cpu.query_mem_event.mem_access_is_load = true;
@@ -136,7 +137,7 @@ static inline def_rtl(lm, rtlreg_t *dest, const rtlreg_t* addr,
 static inline def_rtl(sm, const rtlreg_t *src1, const rtlreg_t* addr,
     word_t offset, int len, int mmu_mode) {
   vaddr_write(s, *addr + offset, len, *src1, mmu_mode);
-#ifdef CONFIG_QUERY_REF
+#if defined(CONFIG_QUERY_REF) && defined(CONFIG_ISA64)
   cpu.query_mem_event.pc = cpu.debug.current_pc;
   cpu.query_mem_event.mem_access = true;
   cpu.query_mem_event.mem_access_is_load = false;
@@ -154,7 +155,7 @@ static inline def_rtl(lms, rtlreg_t *dest, const rtlreg_t* addr,
     IFDEF(CONFIG_ISA64, case 8: *dest = (sword_t)(int64_t)val; return);
     IFDEF(CONFIG_RT_CHECK, default: assert(0));
   }
-#ifdef CONFIG_QUERY_REF
+#if defined(CONFIG_QUERY_REF) && defined(CONFIG_ISA64)
   cpu.query_mem_event.pc = cpu.debug.current_pc;
   cpu.query_mem_event.mem_access = true;
   cpu.query_mem_event.mem_access_is_load = true;
@@ -194,7 +195,11 @@ extern uint64_t get_abs_instr_count();
 #ifndef CONFIG_PERF_OPT
 static inline def_rtl(j, vaddr_t target) {
   // uint64_t orig_pc = cpu.pc, real_target;
-#ifdef CONFIG_GUIDED_EXEC
+  cpu.pc = target;
+  // real_target = target;
+  // CONFIG_BR_LOG: We cannot commit br_log here, because rtl_j is used by all jump and branch.
+
+#if defined(CONFIG_GUIDED_EXEC) && defined(CONFIG_ISA64)
   if(cpu.guided_exec && cpu.execution_guide.force_set_jump_target) {
     if(cpu.execution_guide.jump_target != target) {
       cpu.pc = cpu.execution_guide.jump_target;
@@ -202,25 +207,15 @@ static inline def_rtl(j, vaddr_t target) {
       //   cpu.execution_guide.jump_target, target
       // );
       // real_target = cpu.execution_guide.jump_target;
-      goto end_of_rtl_j;
     }
   }
 #endif
-
-  cpu.pc = target;
-  // real_target = target;
-  // CONFIG_BR_LOG: We cannot commit br_log here, because rtl_j is used by all jump and branch.
 
 #ifndef CONFIG_SHARE
   if (profiling_state == SimpointProfiling && workload_loaded) {
     simpoint_profiling(cpu.pc, true, get_abs_instr_count() - checkpoint_icount_base);
   }
 #endif // CONFIG_SHARE
-
-#ifdef CONFIG_GUIDED_EXEC
-end_of_rtl_j:
-; // make compiler happy
-#endif
 }
 #endif // ndef CONFIG_PERF_OPT
 
@@ -232,7 +227,13 @@ static inline def_rtl(jr, rtlreg_t *target) {
 #ifdef CONFIG_BR_LOG
   uint64_t real_target;
 #endif // CONFIG_BR_LOG
-#ifdef CONFIG_GUIDED_EXEC
+
+  cpu.pc = *target;
+  #ifdef CONFIG_BR_LOG
+  real_target = *target;
+  #endif // CONFIG_BR_LOG
+
+#if defined(CONFIG_GUIDED_EXEC) && defined(CONFIG_ISA64)
   if(cpu.guided_exec && cpu.execution_guide.force_set_jump_target) {
     if(cpu.execution_guide.jump_target != *target) {
       cpu.pc = cpu.execution_guide.jump_target;
@@ -242,26 +243,15 @@ static inline def_rtl(jr, rtlreg_t *target) {
       #ifdef CONFIG_BR_LOG
       real_target = cpu.execution_guide.jump_target;
       #endif // CONFIG_BR_LOG
-      goto end_of_rtl_jr;
     }
   }
 #endif
-
-  cpu.pc = *target;
-  #ifdef CONFIG_BR_LOG
-  real_target = *target;
-  #endif // CONFIG_BR_LOG
 
 #ifndef CONFIG_SHARE
   if (profiling_state == SimpointProfiling && workload_loaded) {
     simpoint_profiling(cpu.pc, true, get_abs_instr_count() - checkpoint_icount_base);
   }
 #endif // CONFIG_SHARE
-
-#ifdef CONFIG_GUIDED_EXEC
-end_of_rtl_jr:
-; // make compiler happy
-#endif
 
   IFDEF(CONFIG_BR_LOG, br_log_commit(s->pc, real_target, 1, BR_JUMP));
 }

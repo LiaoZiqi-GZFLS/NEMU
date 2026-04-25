@@ -92,6 +92,9 @@ XSRCS = $(XSRCS-y)
 
 CC = $(call remove_quote,$(CONFIG_CC))
 CXX = $(call remove_quote,$(CONFIG_CXX))
+# Force to use gcc/g++ since clang isn't installed
+CC := gcc
+CXX := g++
 CFLAGS_BUILD += $(call remove_quote,$(CONFIG_CC_OPT))
 CFLAGS_BUILD += $(if $(CONFIG_CC_LTO),-flto=auto,)
 CFLAGS_BUILD += $(if $(CONFIG_CC_DEBUG),-ggdb3,)

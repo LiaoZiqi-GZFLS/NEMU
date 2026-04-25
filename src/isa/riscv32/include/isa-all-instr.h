@@ -40,6 +40,6 @@
   f(p_blez) f(p_bgez) f(p_bltz) f(p_bgtz)
 
 #define INSTR_TERNARY_CSR(f) \
-  f(csrrw) f(csrrs) 
+  f(csrrw) f(csrrs) f(csrrc)
 
 def_all_EXEC_ID();

@@ -23,6 +23,7 @@
 #define c_add(a, b) ((a) + (b))
 #define c_sub(a, b) ((a) - (b))
 #define c_and(a, b) ((a) & (b))
+#define c_andn(a, b) ((a) & (~(b)))
 #define c_or(a, b)  ((a) | (b))
 #define c_xor(a, b) ((a) ^ (b))
 #define c_shl(a, b) ((a) << ((b) & c_shift_mask))

@@ -366,8 +366,8 @@ void difftest_init() {
 void difftest_init_v2(unsigned state_size) {
   difftest_init();
   if (state_size != DIFFTEST_REG_SIZE) {
-    printf("ERROR: NEMU (%uB) is configured with different states than DUT (%uB).\n",
-        DIFFTEST_REG_SIZE, state_size);
+    printf("ERROR: NEMU (%luB) is configured with different states than DUT (%luB).\n",
+        (unsigned long)DIFFTEST_REG_SIZE, (unsigned long)state_size);
     assert(false);
   }
 }

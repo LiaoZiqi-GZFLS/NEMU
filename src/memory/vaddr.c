@@ -39,10 +39,14 @@ static paddr_t vaddr_trans_and_check_exception(vaddr_t vaddr, int len, int type,
   if (*exp) {
     return 0;
   }
+#ifdef CONFIG_ISA64
   if (cpu.pbmt != 0) {
     isa_mmio_misalign_data_addr_check(paddr, vaddr, len, type, true);
   }
   *exp = !check_paddr(paddr, len, type, type, cpu.mode, vaddr);
+#else
+  *exp = !check_paddr(paddr, len, type, type, 0, vaddr);
+#endif
   return paddr;
 }
 
@@ -60,6 +64,7 @@ static word_t vaddr_read_cross_page(vaddr_t addr, int len, int type, bool needTr
     }
 
 #ifdef CONFIG_MULTICORE_DIFF
+#ifdef CONFIG_ISA64
     if (type == MEM_TYPE_IFETCH) {
       if (!isa_pmp_check_permission(paddr, 1, MEM_TYPE_IFETCH, cpu.mode) ||
           !isa_pma_check_permission(paddr, 1, MEM_TYPE_IFETCH)) {
@@ -71,7 +76,23 @@ static word_t vaddr_read_cross_page(vaddr_t addr, int len, int type, bool needTr
     }
     word_t byte = (type == MEM_TYPE_IFETCH ? golden_pmem_read(paddr, 1) : paddr_read(paddr, 1, type, type, cpu.mode | CROSS_PAGE_LD_FLAG, vaddr));
 #else
+    if (type == MEM_TYPE_IFETCH) {
+      if (!isa_pmp_check_permission(paddr, 1, MEM_TYPE_IFETCH, 0) ||
+          !isa_pma_check_permission(paddr, 1, MEM_TYPE_IFETCH)) {
+        Log("pmp or pma check failed when ifetch");
+
+        cpu.trapInfo.tval = vaddr;
+        longjmp_exception(EX_IAF);
+      }
+    }
+    word_t byte = (type == MEM_TYPE_IFETCH ? golden_pmem_read(paddr, 1) : paddr_read(paddr, 1, type, type, 0 | CROSS_PAGE_LD_FLAG, vaddr));
+#endif
+#else
+#ifdef CONFIG_ISA64
     word_t byte = paddr_read(paddr, 1, type, type, cpu.mode | CROSS_PAGE_LD_FLAG, vaddr);
+#else
+    word_t byte = paddr_read(paddr, 1, type, type, 0 | CROSS_PAGE_LD_FLAG, vaddr);
+#endif
 #endif
     data |= byte << (i << 3);
   }
@@ -113,12 +134,22 @@ static void vaddr_write_cross_page(vaddr_t addr, int len, word_t data, bool need
     paddr_t next_pg_st_paddr = vaddr_trans_and_check_exception(next_pg_st_vaddr, next_pg_st_len, MEM_TYPE_WRITE, &next_pg_st_exp);
 
     if (!cur_pg_st_exp && !next_pg_st_exp) {
+#ifdef CONFIG_ISA64
       paddr_write(cur_pg_st_paddr, cur_pg_st_len, cur_pg_st_data, cpu.mode | CROSS_PAGE_ST_FLAG, cur_pg_st_vaddr);
       paddr_write(next_pg_st_paddr, next_pg_st_len, next_pg_st_data, cpu.mode | CROSS_PAGE_ST_FLAG, next_pg_st_vaddr);
+#else
+      paddr_write(cur_pg_st_paddr, cur_pg_st_len, cur_pg_st_data, 0 | CROSS_PAGE_ST_FLAG, cur_pg_st_vaddr);
+      paddr_write(next_pg_st_paddr, next_pg_st_len, next_pg_st_data, 0 | CROSS_PAGE_ST_FLAG, next_pg_st_vaddr);
+#endif
     }
   } else {
+#ifdef CONFIG_ISA64
     paddr_write(cur_pg_st_vaddr, cur_pg_st_len, cur_pg_st_data, cpu.mode | CROSS_PAGE_ST_FLAG, cur_pg_st_vaddr);
     paddr_write(next_pg_st_vaddr, next_pg_st_len, next_pg_st_data, cpu.mode | CROSS_PAGE_ST_FLAG, next_pg_st_vaddr);
+#else
+    paddr_write(cur_pg_st_vaddr, cur_pg_st_len, cur_pg_st_data, 0 | CROSS_PAGE_ST_FLAG, cur_pg_st_vaddr);
+    paddr_write(next_pg_st_vaddr, next_pg_st_len, next_pg_st_data, 0 | CROSS_PAGE_ST_FLAG, next_pg_st_vaddr);
+#endif
   }
 
 }
@@ -135,7 +166,11 @@ static word_t vaddr_mmu_read(struct Decode *s, vaddr_t addr, int len, int type) 
     addr = pg_base | (addr & PAGE_MASK);
 #ifdef CONFIG_MULTICORE_DIFF
     if (type == MEM_TYPE_IFETCH) {
+#ifdef CONFIG_ISA64
       if (!isa_pmp_check_permission(addr, len, MEM_TYPE_IFETCH, cpu.mode) ||
+#else
+      if (!isa_pmp_check_permission(addr, len, MEM_TYPE_IFETCH, 0) ||
+#endif
           !isa_pma_check_permission(addr, len, MEM_TYPE_IFETCH)) {
         Log("pmp or pma check failed when ifetch");
 
@@ -143,9 +178,17 @@ static word_t vaddr_mmu_read(struct Decode *s, vaddr_t addr, int len, int type) 
         longjmp_exception(EX_IAF);
       }
     }
+#ifdef CONFIG_ISA64
     word_t rdata = (type == MEM_TYPE_IFETCH ? golden_pmem_read(addr, len) : paddr_read(addr, len, type, type, cpu.mode, vaddr));
 #else
+    word_t rdata = (type == MEM_TYPE_IFETCH ? golden_pmem_read(addr, len) : paddr_read(addr, len, type, type, 0, vaddr));
+#endif
+#else
+#ifdef CONFIG_ISA64
     word_t rdata = paddr_read(addr, len, type, type, cpu.mode, vaddr);
+#else
+    word_t rdata = paddr_read(addr, len, type, type, 0, vaddr);
+#endif
 #endif // CONFIG_MULTICORE_DIFF
     ref_log_cpu("mmu_read: vaddr 0x%lx, paddr 0x%lx, rdata 0x%lx",
         vaddr, addr, rdata);
@@ -163,7 +206,11 @@ static void vaddr_mmu_write(struct Decode *s, vaddr_t addr, int len, word_t data
     addr = pg_base | (addr & PAGE_MASK);
     ref_log_cpu("mmu_write: vaddr 0x%lx, paddr 0x%lx, len %d, data 0x%lx",
         vaddr, addr, len, data);
+#ifdef CONFIG_ISA64
     paddr_write(addr, len, data, cpu.mode, vaddr);
+#else
+    paddr_write(addr, len, data, 0, vaddr);
+#endif
   }
 }
 
@@ -199,7 +246,11 @@ static inline word_t vaddr_read_internal(void *s, vaddr_t addr, int len, int typ
   }
   if (mmu_mode == MMU_DIRECT) {
     Logm("Paddr reading directly");
+#ifdef CONFIG_ISA64
     return paddr_read(addr, len, type, type, cpu.mode, addr);
+#else
+    return paddr_read(addr, len, type, type, 0, addr);
+#endif
   }
   return MUXDEF(ENABLE_HOSTTLB, hosttlb_read, vaddr_mmu_read) ((struct Decode *)s, addr, len, type);
   return 0;
@@ -233,7 +284,7 @@ word_t vaddr_ifetch(vaddr_t addr, int len) {
 }
 
 word_t vaddr_read(struct Decode *s, vaddr_t addr, int len, int mmu_mode) {
-  Logm("Reading vaddr %lx", addr);
+  Logm("Reading vaddr " FMT_WORD, addr);
   return vaddr_read_internal(s, addr, len, MEM_TYPE_READ, mmu_mode);
 }
 
@@ -273,7 +324,11 @@ void vaddr_write(struct Decode *s, vaddr_t addr, int len, word_t data, int mmu_m
     return;
   }
   if (mmu_mode == MMU_DIRECT) {
+#ifdef CONFIG_ISA64
     paddr_write(addr, len, data, cpu.mode, addr);
+#else
+    paddr_write(addr, len, data, 0, addr);
+#endif
     return;
   }
   MUXDEF(ENABLE_HOSTTLB, hosttlb_write, vaddr_mmu_write) (s, addr, len, data);

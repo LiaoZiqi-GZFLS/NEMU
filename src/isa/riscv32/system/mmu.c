@@ -69,16 +69,24 @@ static paddr_t ptw(vaddr_t vaddr, int type) {
   paddr_t pdir_base = cpu.satp.ppn << 12;
 
   PTE pde;
-  pde.val	= paddr_read(pdir_base + addr->pdir_idx * 4, 4, MEM_TYPE_READ, MODE_S, vaddr);
+#ifdef CONFIG_ISA64
+  pde.val	= paddr_read(pdir_base + addr->pdir_idx * 4, 4, MEM_TYPE_READ, MEM_TYPE_READ, cpu.mode, vaddr);
+#else
+  pde.val	= paddr_read(pdir_base + addr->pdir_idx * 4, 4, MEM_TYPE_READ, MEM_TYPE_READ, 0, vaddr);
+#endif
   if (!pde.valid) {
-    panic("pc = %x, vaddr = %x, pdir_base = %x, pde = %x", cpu.pc, vaddr, pdir_base, pde.val);
+    panic("pc = " FMT_WORD ", vaddr = " FMT_WORD ", pdir_base = " FMT_WORD ", pde = " FMT_WORD, (word_t)cpu.pc, (word_t)vaddr, (word_t)pdir_base, (word_t)pde.val);
   }
 
   paddr_t pt_base = pde.ppn << 12;
   PTE pte;
-  pte.val = paddr_read(pt_base + addr->pt_idx * 4, 4, MEM_TYPE_READ, MODE_S, vaddr);
+#ifdef CONFIG_ISA64
+  pte.val = paddr_read(pt_base + addr->pt_idx * 4, 4, MEM_TYPE_READ, MEM_TYPE_READ, cpu.mode, vaddr);
+#else
+  pte.val = paddr_read(pt_base + addr->pt_idx * 4, 4, MEM_TYPE_READ, MEM_TYPE_READ, 0, vaddr);
+#endif
   if (!pte.valid) {
-    panic("pc = %x, vaddr = %x, pt_base = %x, pte = %x", cpu.pc, vaddr, pt_base, pte.val);
+    panic("pc = " FMT_WORD ", vaddr = " FMT_WORD ", pt_base = " FMT_WORD ", pte = " FMT_WORD, (word_t)cpu.pc, (word_t)vaddr, (word_t)pt_base, (word_t)pte.val);
   }
 
   // update TLB

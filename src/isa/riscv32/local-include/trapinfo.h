@@ -1,5 +1,6 @@
 /***************************************************************************************
 * Copyright (c) 2014-2021 Zihao Yu, Nanjing University
+* Copyright (c) 2020-2022 Institute of Computing Technology, Chinese Academy of Sciences
 *
 * NEMU is licensed under Mulan PSL v2.
 * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -13,36 +14,18 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
-#include "../local-include/rtl.h"
-#include "../local-include/intr.h"
+#ifndef __TRAPINFO_H__
+#define __TRAPINFO_H__
 
-#ifndef __ICS_EXPORT
-word_t raise_intr(uint32_t NO, vaddr_t epc) {
-  cpu.scause = NO;
-  cpu.sepc = epc;
-  cpu.sstatus.spie = cpu.sstatus.sie;
-  cpu.sstatus.sie = 0;
-  return cpu.stvec;
-}
+#include "common.h"
 
-word_t isa_query_intr() {
-  if (cpu.INTR && cpu.sstatus.sie) {
-    cpu.INTR = false;
-    return raise_intr(0x80000005, cpu.pc);
-  }
-  return INTR_EMPTY;
-}
+typedef struct {
+    word_t tval;
+    word_t tval2;
+    word_t tinst;
+} trap_info_t;
 
-#else
-word_t raise_intr(uint32_t NO, vaddr_t epc) {
-  /* TODO: Trigger an interrupt/exception with ``NO''.
-   * That is, use ``NO'' to index the IDT.
-   */
+void clear_trapinfo();
 
-  return 0;
-}
 
-word_t isa_query_intr() {
-  return INTR_EMPTY;
-}
-#endif
+#endif // __TRAPINFO_H__

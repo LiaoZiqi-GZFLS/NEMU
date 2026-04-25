@@ -60,7 +60,7 @@ void br_log_dump() {
   fprintf(stdout, "======== branch log ========\n");
   for (int i = 0; i < total; i++) {
     int idx = (i + start) % CONFIG_BR_LOG_SIZE;
-    fprintf(stdout, FMT_WORD " %d %d " FMT_WORD "\n",
+    fprintf(stdout, "0x%016lx %d %d 0x%016lx\n",
       br_log[idx].pc, br_log[idx].taken, br_log[idx].type, br_log[idx].target);
   }
   fprintf(stdout, "======== branch log end ========\n");

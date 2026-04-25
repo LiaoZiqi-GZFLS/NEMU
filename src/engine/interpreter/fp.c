@@ -51,7 +51,7 @@ static inline float32_t rtlToF32(rtlreg_t r) {
   return f;
 }
 
-static inline float64_t rtlToF64(rtlreg_t r) {
+static inline float64_t rtlToF64(uint64_t r) {
   float64_t f = { .v = r };
   return f;
 }

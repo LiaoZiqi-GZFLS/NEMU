@@ -43,3 +43,25 @@ void init_isa() {
   /* Initialize this virtual computer system. */
   restart();
 }
+
+#include <cpu/decode.h>
+#include <cpu/ifetch.h>
+#include <isa-all-instr.h>
+#include <rtl/rtl.h>
+
+int isa_fetch_decode(Decode *s) {
+  s->isa.instr.val = instr_fetch(&s->snpc, 4);
+  s->type = INSTR_TYPE_N;
+  return EXEC_ID_inv;
+}
+
+bool isa_pma_check_permission(paddr_t addr, int len, int type) {
+  return true;
+}
+
+void isa_misalign_data_addr_check(vaddr_t vaddr, int len, int type) {
+}
+
+bool able_to_take_cpt(void) {
+  return false;
+}

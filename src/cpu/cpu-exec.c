@@ -27,8 +27,10 @@
 #include <generated/autoconf.h>
 #include <profiling/profiling_control.h>
 #include <checkpoint/semantic_point.h>
+#ifdef CONFIG_ISA64
 #include "../local-include/trigger.h"
 #include "../local-include/aia.h"
+#endif
 #include "macro.h"
 
 /* The assembly code of instructions executed is only output to the screen
@@ -201,9 +203,9 @@ _Noreturn void longjmp_context(int cause) {
 _Noreturn void longjmp_exception(int ex_cause) {
   if (context_idx == 0) {
     // context_idx == 0 means only the execute loop context saved.
-  #ifdef CONFIG_GUIDED_EXEC
+#if defined(CONFIG_GUIDED_EXEC) && defined(CONFIG_ISA64)
     cpu.guided_exec = false;
-  #endif
+#endif
     g_ex_cause = ex_cause;
     Loge("longjmp_context(NEMU_EXEC_EXCEPTION)");
     longjmp_context(NEMU_EXEC_EXCEPTION);
@@ -371,7 +373,7 @@ uint64_t per_bb_profile(Decode *prev_s, Decode *s, bool control_taken) {
   extern bool try_take_cpt(uint64_t icount);
   bool taken = try_take_cpt(abs_inst_count);
   if (taken) {
-    Log("Have taken checkpoint on pc 0x%lx", s->pc);
+    Log("Have taken checkpoint on pc " FMT_WORD, s->pc);
     if (checkpoint_state == SemanticCheckpointing || recvd_manual_oneshot_cpt || checkpoint_state == CheckpointOnNEMUTrap) {
       Log("Quit after taken manual cpt\n");
       nemu_state.state = NEMU_QUIT;
@@ -441,8 +443,8 @@ static void execute(int n) {
 
     if (is_ctrl) {
       uint64_t abs_inst_count = per_bb_profile(prev_s, s, br_taken);
-      Logtb("prev pc = 0x%lx, pc = 0x%lx", prev_s->pc, s->pc);
-      Logtb("Executed %ld instructions in total, pc: 0x%lx\n",
+      Logtb("prev pc = 0x" FMT_WORD ", pc = 0x" FMT_WORD, prev_s->pc, s->pc);
+      Logtb("Executed %ld instructions in total, pc: 0x" FMT_WORD "\n",
             (int64_t)abs_inst_count, prev_s->pc);
     }
     if (manual_cpt_quit) {
@@ -466,7 +468,7 @@ static void execute(int n) {
 
     // clear for recording next inst
     is_ctrl = false;
-    Logti("prev pc = 0x%lx, pc = 0x%lx", prev_s->pc, s->pc);
+    Logti("prev pc = 0x" FMT_WORD ", pc = 0x" FMT_WORD, prev_s->pc, s->pc);
 
     IFDEF(CONFIG_INSTR_CNT_BY_INSTR, g_nr_guest_instr += 1);
     IFDEF(CONFIG_INSTR_CNT_BY_INSTR, n_remain -= 1);
@@ -487,7 +489,7 @@ end_of_loop:
   IFDEF(CONFIG_INSTR_CNT_BY_INSTR, n_remain -= 1);
   // g_nr_guest_instr_temp += 1;
 
-  Logti("end_of_loop: prev pc = 0x%lx, pc = 0x%lx", prev_s->pc, s->pc);
+  Logti("end_of_loop: prev pc = 0x" FMT_WORD ", pc = 0x" FMT_WORD, prev_s->pc, s->pc);
   Loge("total insts: %'lu, execute remain: %'d", get_abs_instr_count(), n_remain);
 
   if (is_ctrl) {
@@ -839,9 +841,13 @@ void cpu_exec(uint64_t n) {
 
       cpu.pc = raise_intr(g_ex_cause, prev_s->pc);
       cpu.amo = false; // clean up
+#ifdef CONFIG_ISA64
       cpu.pbmt = 0;
+#endif
+#ifdef CONFIG_RVV
       cpu.isVldst = false;
       cpu.isVecUnitStore = false;
+#endif
 
       // No need to settle instruction counting here, as it is done in longjmp handler.
       // It's necessary to flush tcache for exception: addr space may conflict in different priv/mmu mode.

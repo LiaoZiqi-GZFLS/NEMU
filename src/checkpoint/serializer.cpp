@@ -24,7 +24,13 @@
 #include <cstdio>
 #include <profiling/profiling_control.h>
 
+#ifdef CONFIG_ISA_riscv64
 #include "../isa/riscv64/local-include/csr.h"
+#elif defined(CONFIG_ISA_riscv32)
+#include "../isa/riscv32/local-include/csr.h"
+#else
+#error "Unsupported ISA"
+#endif
 #include <common.h>
 #include <isa.h>
 

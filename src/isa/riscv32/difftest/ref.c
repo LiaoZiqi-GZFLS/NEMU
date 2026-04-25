@@ -17,6 +17,21 @@
 #include <difftest.h>
 #include "../local-include/intr.h"
 
+char *reg_dump_file = NULL;
+
+// FP stubs
+int isa_fp_csr_check(void) { return 0; }
+void isa_fp_set_ex(int ex) { }
+int isa_fp_get_rm(void) { return 0; }
+int isa_fp_rm_check(int rm) { return 0; }
+int isa_fp_get_frm(void) { return 0; }
+
+// Difftest stubs
+void isa_difftest_csrcpy(void *dut, bool direction) { }
+void isa_difftest_uarchstatus_cpy(void *dut, bool direction) { }
+void isa_update_mip(unsigned lcofip) { }
+void isa_sync_custom_mflushpwr(bool l2FlushDone) { }
+
 void isa_difftest_regcpy(void *dut, bool direction) {
   if (direction == DIFFTEST_TO_REF) memcpy(&cpu, dut, DIFFTEST_REG_SIZE);
   else memcpy(dut, &cpu, DIFFTEST_REG_SIZE);

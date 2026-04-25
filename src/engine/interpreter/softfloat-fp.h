@@ -9,9 +9,15 @@
 #define F32_SIGN ((uint64_t)1ul << 31)
 #define F64_SIGN ((uint64_t)1ul << 63)
 
+#ifndef defaultNaNF16UI
 #define defaultNaNF16UI 0x7E00
+#endif
+#ifndef defaultNaNF32UI
 #define defaultNaNF32UI 0x7FC00000
+#endif
+#ifndef defaultNaNF64UI
 #define defaultNaNF64UI UINT64_C( 0x7FF8000000000000 )
+#endif
 
 #define ui8_fromPosOverflow  0xFF
 #define ui8_fromNegOverflow  0
@@ -37,7 +43,7 @@
 static inline float16_t rtlToF16(rtlreg_t r);
 static inline float32_t rtlToF32(rtlreg_t r);
 static inline float32_t rtlToVF32(rtlreg_t r);
-static inline float64_t rtlToF64(rtlreg_t r);
+static inline float64_t rtlToF64(uint64_t r);
 
 static inline float16_t f16_neg(float16_t a) {
   return (float16_t){.v = (uint16_t)(a.v ^ F16_SIGN)};
