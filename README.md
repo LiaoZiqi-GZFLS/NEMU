@@ -6,8 +6,11 @@ NEMU(NJU Emulator) is a simple but complete full-system emulator designed for te
 Originally it supports x86, mips32, riscv64, and riscv32.
 **This repo only guarantees the support for riscv64**.
 
-**RV32 支持**：本分支已修复并支持 RV32（32位RISC-V）编译，可用于RV32 CPU设计的差分测试。
-详细使用说明请参考 [RV32_BUILD_GUIDE.md](RV32_BUILD_GUIDE.md)。
+**RV32 Support**: This branch has been fixed to support RV32 (32-bit RISC-V) compilation for differential testing of RV32 CPU designs.
+
+For detailed usage instructions:
+- 🇨🇳 中文文档: [RV32_BUILD_GUIDE.md](RV32_BUILD_GUIDE.md)
+- 🇺🇸 English: [RV32_BUILD_GUIDE_EN.md](RV32_BUILD_GUIDE_EN.md)
 
 The main features of NEMU include
 * a small monitor with a simple debugger
